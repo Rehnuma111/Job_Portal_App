@@ -4,6 +4,7 @@ import connectDB from "./config/db.js";
 import UserRoutes from "./routes/user.routes.js";
 import CompanyRoutes from "./routes/company.route.js";
 import JobRoutes from "./routes/job.routes.js";
+import ApplicationRoutes from "./routes/application.route.js";
 
 import cookieParser from "cookie-parser";
 import cors from "cors";
@@ -29,6 +30,7 @@ app.use(cors(corsOptions))
 app.use("/api/v1/users", UserRoutes);
 app.use("/api/v1/company", CompanyRoutes);
 app.use("/api/v1/job", JobRoutes);
+app.use("/api/v1/application", ApplicationRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Is Running");
