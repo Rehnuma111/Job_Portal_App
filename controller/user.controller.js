@@ -1,76 +1,171 @@
-// import mongoose from "mongoose";
-// import User from "../models/user.model.js";
+import { User } from "../models/user.model.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-// export const createUser = async (req, res) => {
-//   try {
-//     const { name, email } = req.body;
-//     console.log("Received Data:", name, email);
+export const register = async (req, res) => {
+  try {
+    const { fullName, email, phoneNumber, password, role } = req.body;
 
-//     if (!name || !email) {
-//       return res.status(400).json({
-//         error: "Name , Email , and Passowrd is required",
-//       });
-//     }
+    if (!fullName || !email || !phoneNumber || !password || !role) {
+      return res.status(400).json({
+        message: "Something is missing",
+        success: false,
+      });
+    }
 
-//     const existingUser = await User.findOne({ email });
-//     if (existingUser) {
-//       return res.status(409).json({
-//         error: "User with this email already exists",
-//       });
-//     }
+    const user = await User.findOne({ email });
+    if (user) {
+      return res.status(400).json({
+        message: "User already exist with this email.",
+        success: false,
+      });
+    }
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-//     const user = new User({ name, email });
-//     await user.save();
-//     res.status(201).json({
-//       data: user,
-//       success: "Data Saved Successfully",
-//     });
-//   } catch (error) {
-//     console.error("Create user error:", error.message);
-//     res.status(500).json({ error: "Something went wrong" });
-//   }
-// };
+    await User.create({
+      fullName,
+      email,
+      phoneNumber,
+      password: hashedPassword,
+      role,
+    });
 
-// export const getUsers = async (req, res) => {
-//   try {
-//     const users = await User.find();
-//     res.status(200).json({
-//       success: true,
-//       data: users,
-//     });
-//   } catch (error) {
-//     console.log("error ", error);
-//   }
-// };
+    return res.status(201).json({
+      message: "Account created successfully.",
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    return res.status(500).json({
+      message: "Something went wrong on the server.",
+      success: false,
+      error: error.message, // optional: can be removed in production
+    });
+  }
+};
+export const login = async (req, res) => {
+  try {
+    const { email, password, role } = req.body;
 
-// export const getUserById = async (req, res) => {
-//   try {
-//     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-//       return res.status(400).json({
-//         success: false,
-//         error: "Invalid user ID format",
-//       });
-//     }
-//     const user = await User.findById(req.params.id);
-//     if (!user) {
-//       return res.status(404).json({
-//         error: "User Not Found",
-//       });
-//     }else{
-//       res.json({
-//         success: true,
-//         data: user,
-//       });
-//     }
-//   } catch (error) {
-//     console.log("error ", error);
-//   }
-// };
+    if (!email || !password || !role) {
+      return res.status(400).json({
+        message: "Something is missing",
+        success: false,
+      });
+    }
+    let user = await User.findOne({ email });
+    if (!user) {
+      return res.status(400).json({
+        message: "Incorrect email or password.",
+        success: false,
+      });
+    }
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({
+        message: "Incorrect email or password.",
+        success: false,
+      });
+    }
+    // check role is correct or not
+    if (role !== user.role) {
+      return res.status(400).json({
+        message: "Account doesn't exist with current role.",
+        success: false,
+      });
+    }
 
-// export const updateUser = async(req, res)=>{
-//   try {
-//     const updated = await User.findByIdAndUpdate()
-//   } catch (error) {
+    const tokenData = {
+      userId: user._id,
+    };
+    const token = await jwt.sign(tokenData, process.env.SECRET_KEY, {
+      expiresIn: "1d",
+    });
+     
+    user = {
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      profile: user.profile,
+    };
+    console.log("DATA",user);
+
+    return res
+      .status(200)
+      .cookie("token", token, {
+        maxAge: 1 * 24 * 60 * 60 * 1000,
+        httpsOnly: true,
+        sameSite: "strict",
+      })
+      .json({
+        message: `Welcome back ${user.fullName}`,
+        user,
+        success: true,
+      });
+  } catch (error) {
+    console.log(error);
+  }
+};
+export const logout = async (req, res) => {
+    try {
+        return res.status(200).cookie("token", "", { maxAge: 0 }).json({
+            message: "Logged out successfully.",
+            success: true
+        })
+    } catch (error) {
+        console.log(error);
+    }
+}
+export const updateProfile = async (req, res) => {
+  try {
+    const { fullName, email, phoneNumber, bio, skills } = req.body;
+
+    const file = req.file;
+    // cloudinary ayega idhar
+
+    let skillsArray;
+    if (skills) {
+      skillsArray = skills.split(",");
+    }
+    const userId = req.id; // middleware authentication
+    console.log(userId);
     
-//   }
-// }
+    let user = await User.findById(userId);
+
+    if (!user) {
+      return res.status(400).json({
+        message: "User not found.",
+        success: false,
+      });
+    }
+    // updating data
+    if (fullName) user.fullName = fullName;
+    if (email) user.email = email;
+    if (phoneNumber) user.phoneNumber = phoneNumber;
+    if (bio) user.profile.bio = bio;
+    if (skills) user.profile.skills = skillsArray;
+
+    // resume comes later here...
+
+    await user.save();
+
+    user = {
+      _id: user._id,
+      fullName: user.fullName,
+      email: user.email,
+      phoneNumber: user.phoneNumber,
+      role: user.role,
+      profile: user.profile,
+    };
+
+    return res.status(200).json({
+      message: "Profile updated successfully.",
+      user,
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};

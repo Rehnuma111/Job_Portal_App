@@ -1,10 +1,14 @@
 import express from "express";
 const app = express();
 import connectDB from "./config/db.js";
-// import UserRoutes from "./routes/user.routes.js";
+import UserRoutes from "./routes/user.routes.js";
+import CompanyRoutes from "./routes/company.route.js";
+import JobRoutes from "./routes/job.routes.js";
+
 import cookieParser from "cookie-parser";
 import cors from "cors";
-
+import dotenv from "dotenv";
+dotenv.config();
 
 //middleware
 app.use(express.json());
@@ -13,16 +17,18 @@ app.use(
     extended: true,
   })
 );
-app.use(cookieParser)
+app.use(cookieParser())
 
-const corsOptions ={
-    origin:"http//localhost:5173",
-    credentails:true
-}
+const corsOptions = {
+  origin: "http://localhost:5173",
+  credentials: true,
+};
 
 app.use(cors(corsOptions))
-
-// app.use("/api/v1/users", UserRoutes);
+//API
+app.use("/api/v1/users", UserRoutes);
+app.use("/api/v1/company", CompanyRoutes);
+app.use("/api/v1/job", JobRoutes);
 
 app.get("/", (req, res) => {
   res.send("API Is Running");
