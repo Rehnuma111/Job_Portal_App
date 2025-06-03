@@ -4,9 +4,11 @@ import jwt from "jsonwebtoken";
 
 export const register = async (req, res) => {
   try {
-    const { fullName, email, phoneNumber, password, role } = req.body;
+    const { fullname, email, phoneNumber, password, role } = req.body;
+    console.log(fullname, email, phoneNumber, password, role );
+    
 
-    if (!fullName || !email || !phoneNumber || !password || !role) {
+    if (!fullname || !email || !phoneNumber || !password || !role) {
       return res.status(400).json({
         message: "Something is missing",
         success: false,
@@ -23,7 +25,7 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await User.create({
-      fullName,
+      fullname,
       email,
       phoneNumber,
       password: hashedPassword,
