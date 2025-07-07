@@ -1,19 +1,23 @@
 import { User } from "../models/user.model.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import getDataUri from "../utils/getDataUri.js";
+import cloudinary from "../utils/cloudniary.js";
 
 export const register = async (req, res) => {
   try {
-    const { fullname, email, phoneNumber, password, role } = req.body;
-    console.log(fullname, email, phoneNumber, password, role );
-    
+    const { fullName, email, phoneNumber, password, role } = req.body;
+    console.log(fullName, email, phoneNumber, password, role);
 
-    if (!fullname || !email || !phoneNumber || !password || !role) {
+    if (!fullName || !email || !phoneNumber || !password || !role) {
       return res.status(400).json({
         message: "Something is missing",
         success: false,
       });
     }
+    // const file = req.file;
+    // const fileUri = getDataUri(file);
+    // const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
 
     const user = await User.findOne({ email });
     if (user) {
@@ -25,11 +29,14 @@ export const register = async (req, res) => {
     const hashedPassword = await bcrypt.hash(password, 10);
 
     await User.create({
-      fullname,
+      fullName,
       email,
       phoneNumber,
       password: hashedPassword,
       role,
+      // profile: {
+      //   profilePhoto: cloudResponse.secure_url,
+      // },
     });
 
     return res.status(201).json({
@@ -83,16 +90,16 @@ export const login = async (req, res) => {
     const token = await jwt.sign(tokenData, process.env.SECRET_KEY, {
       expiresIn: "1d",
     });
-     
+
     user = {
       _id: user._id,
-      fullName: user.fullname,
+      fullName: user.fullName,
       email: user.email,
       phoneNumber: user.phoneNumber,
       role: user.role,
       profile: user.profile,
     };
-    console.log("DATA",user);
+    console.log("DATA", user);
 
     return res
       .status(200)
@@ -102,7 +109,7 @@ export const login = async (req, res) => {
         sameSite: "strict",
       })
       .json({
-        message: `Welcome back ${user.fullName}`,
+        message: `Welcome back ${user?.fullName}`,
         user,
         success: true,
       });
@@ -111,29 +118,41 @@ export const login = async (req, res) => {
   }
 };
 export const logout = async (req, res) => {
-    try {
-        return res.status(200).cookie("token", "", { maxAge: 0 }).json({
-            message: "Logged out successfully.",
-            success: true
-        })
-    } catch (error) {
-        console.log(error);
-    }
-}
+  try {
+    return res.status(200).cookie("token", "", { maxAge: 0 }).json({
+      message: "Logged out successfully.",
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
 export const updateProfile = async (req, res) => {
   try {
     const { fullName, email, phoneNumber, bio, skills } = req.body;
+    console.log(
+      fullName,
+      email,
+      phoneNumber,
+      bio,
+      skills,
+      req.file
+    );
 
     const file = req.file;
-    // cloudinary ayega idhar
+    let cloudResponse;
+    if (file) {
+      const fileUri = getDataUri(file);
+      cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+    }
 
     let skillsArray;
     if (skills) {
       skillsArray = skills.split(",");
     }
-    const userId = req.id; // middleware authentication
+    const userId = req.id; 
     console.log(userId);
-    
+
     let user = await User.findById(userId);
 
     if (!user) {
@@ -146,11 +165,14 @@ export const updateProfile = async (req, res) => {
     if (fullName) user.fullName = fullName;
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
-    if (bio) user.profile.bio = bio;
+    if (bio) user?.profile.bio = bio;
     if (skills) user.profile.skills = skillsArray;
 
     // resume comes later here...
-
+    if (cloudResponse) {
+      user.profile.resume = cloudResponse.secure_url; // save the cloudinary url
+      user.profile.resumeOriginalName = file.originalname; // Save the original file name
+    }
     await user.save();
 
     user = {
