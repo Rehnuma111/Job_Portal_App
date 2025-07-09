@@ -108,7 +108,6 @@ export const getAdminJobs = async (req, res) => {
     const adminId = req.id;
     const jobs = await Job.find({ created_by: adminId }).populate({
       path: "company",
-      
     });
     if (!jobs) {
       return res.status(404).json({
@@ -122,5 +121,105 @@ export const getAdminJobs = async (req, res) => {
     });
   } catch (error) {
     console.log(error);
+  }
+};
+
+export const getFilterJobs = async (req, res) => {
+  try {
+    const {
+      keyword = " ",
+      location,
+      title,
+      salary,
+      experienceLevel,
+      jobType,
+      minSalary,
+      maxSalary,
+    } = req.query;
+    const query = {
+      $or: [
+        { title: { $regex: keyword, $options: "i" } },
+        { description: { $regex: keyword, $options: "i" } },
+      ],
+    };
+    if (title) {
+      query.title = { $regex: title, $options: "i" };
+    }
+    if (location) {
+      query.location = { $regex: location, $options: "i" };
+    }
+
+    if (jobType) {
+      query.jobType = jobType;
+    }
+
+    if (experienceLevel) {
+      query.experienceLevel = Number(experienceLevel);
+    }
+
+    if (minSalary || maxSalary) {
+      query.salary = {};
+      if (minSalary) query.salary.$gte = Number(minSalary);
+      if (maxSalary) query.salary.$lte = Number(maxSalary);
+    } else if (salary) {
+      query.salary = Number(salary);
+    }
+
+    const jobs = await Job.find(query)
+      .populate({
+        path: "company",
+      })
+      .sort({ createdAt: -1 });
+
+    if (!jobs || jobs.length === 0) {
+      return res.status(404).json({
+        message: "No Jobs Found",
+        success: false,
+      });
+    }
+    return res.status(200).json({
+      jobs,
+      success: true,
+    });
+  } catch (error) {
+    console.log(error);
+    res.status(500).json({ message: "Server error", success: false });
+  }
+};
+
+export const getFiltersValue = async (req, res) => {
+  try {
+    const jobTypes = await Job.distinct("jobType");
+    const salaries = await Job.distinct("salary");
+    const locations = await Job.distinct("location")
+    const experienceLevels = await Job.distinct("experienceLevel");
+    // const salaryBuckets = [
+    //   "0 - 40k",
+    //   "40k - 1 Lakh",
+    //   "1 Lakh - 5 Lakh",
+    //   "5 Lakh+",
+    // ];
+
+    res.status(200).json([
+      {
+        filterType: "Location",
+        array: locations,
+      },
+      {
+        filterType: "Job Type",
+        array: jobTypes,
+      },
+      {
+        filterType: "Experience Level",
+        array: experienceLevels.map((e) => `${e}+ years`),
+      },
+      {
+        filterType: "Salary",
+        array: salaries,
+      },
+    ]);
+  } catch (error) {
+    console.error("Error fetching filters", error);
+    res.status(500).json({ message: "Failed to fetch filter options" });
   }
 };
