@@ -175,11 +175,13 @@ export const getFilterJobs = async (req, res) => {
       return res.status(404).json({
         message: "No Jobs Found",
         success: false,
+         total: jobs.length,
       });
     }
     return res.status(200).json({
       jobs,
       success: true,
+      total: jobs.length,
     });
   } catch (error) {
     console.log(error);
@@ -191,30 +193,24 @@ export const getFiltersValue = async (req, res) => {
   try {
     const jobTypes = await Job.distinct("jobType");
     const salaries = await Job.distinct("salary");
-    const locations = await Job.distinct("location")
+    const locations = await Job.distinct("location");
     const experienceLevels = await Job.distinct("experienceLevel");
-    // const salaryBuckets = [
-    //   "0 - 40k",
-    //   "40k - 1 Lakh",
-    //   "1 Lakh - 5 Lakh",
-    //   "5 Lakh+",
-    // ];
 
     res.status(200).json([
       {
-        filterType: "Location",
+        label: "Location",
+        filterType: "location",
         array: locations,
       },
+      { label: "Job Type", filterType: "jobType", array: jobTypes },
       {
-        filterType: "Job Type",
-        array: jobTypes,
+        label: "Experience Level",
+        filterType: "experienceLevel",
+        array: experienceLevels,
       },
       {
-        filterType: "Experience Level",
-        array: experienceLevels.map((e) => `${e}+ years`),
-      },
-      {
-        filterType: "Salary",
+        label: "Salary",
+        filterType: "salary",
         array: salaries,
       },
     ]);
