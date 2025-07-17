@@ -98,8 +98,8 @@ export const login = async (req, res) => {
     const tokenData = {
       userId: user._id,
     };
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "1h",
+    const token = await jwt.sign(tokenData, process.env.SECRET_KEY, {
+      expiresIn: "1d",
     });
 
     user = {
@@ -116,9 +116,8 @@ export const login = async (req, res) => {
       .status(200)
       .cookie("token", token, {
         maxAge: 1 * 24 * 60 * 60 * 1000,
-        httpOnly: true, // ✅ for security
-        secure: true, // ✅ required if using HTTPS
-        sameSite: "None", // ✅ needed for cross-site cookies
+        httpsOnly: true,
+        sameSite: "strict",
       })
       .json({
         message: `Welcome back ${user?.fullName}`,
@@ -141,46 +140,46 @@ export const logout = async (req, res) => {
 };
 export const updateProfile = async (req, res) => {
   try {
-    console.log("Update profile called");
     const { fullName, email, phoneNumber, bio, skills } = req.body;
+    console.log(fullName, email, phoneNumber, bio, skills, req.file);
 
     const file = req.file;
     let cloudResponse;
-
     if (file) {
       const fileUri = getDataUri(file);
       cloudResponse = await cloudinary.uploader.upload(fileUri.content);
     }
 
-    let skillsArray = Array.isArray(skills) ? skills : skills?.split(",");
-
+    let skillsArray;
+    if (skills) {
+      skillsArray = skills.split(",");
+    }
     const userId = req.id;
+    console.log(userId);
 
     let user = await User.findById(userId);
+
     if (!user) {
       return res.status(400).json({
         message: "User not found.",
         success: false,
       });
     }
-
-    if (!user.profile) user.profile = {};
-
+    // updating data
     if (fullName) user.fullName = fullName;
     if (email) user.email = email;
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
-    if (skillsArray) user.profile.skills = skillsArray;
+    if (skills) user.profile.skills = skillsArray;
 
+    // resume comes later here...
     if (cloudResponse) {
-      user.profile.resume = cloudResponse.secure_url;
-      user.profile.resumeOriginalName = file.originalname;
+      user.profile.resume = cloudResponse.secure_url; // save the cloudinary url
+      user.profile.resumeOriginalName = file.originalname; // Save the original file name
     }
-
     await user.save();
 
-    // Cleaned user response
-    const responseUser = {
+    user = {
       _id: user._id,
       fullName: user.fullName,
       email: user.email,
@@ -191,18 +190,13 @@ export const updateProfile = async (req, res) => {
 
     return res.status(200).json({
       message: "Profile updated successfully.",
-      user: responseUser,
+      user,
       success: true,
     });
   } catch (error) {
-    console.error("Update profile error:", error);
-    return res.status(500).json({
-      message: "Something went wrong while updating profile.",
-      success: false,
-    });
+    console.log(error);
   }
 };
-
 export const forgotPassword = async (req, res) => {
   const { email } = req.body;
 
@@ -282,93 +276,5 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// Save a job for later
-export const saveJobForLater = async (req, res) => {
-  try {
-    const userId = req.id;
-    const { jobId } = req.params;
-    if (!jobId) {
-      return res
-        .status(400)
-        .json({ message: "Job ID is required", success: false });
-    }
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    if (user.savedJobs.includes(jobId)) {
-      return res
-        .status(400)
-        .json({ message: "Job already saved", success: false });
-    }
-    user.savedJobs.push(jobId);
-    await user.save();
-    return res
-      .status(200)
-      .json({
-        message: "Job saved for later",
-        success: true,
-        userId: user._id,
-      });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
-  }
-};
-
-export const removeSavedJob = async (req, res) => {
-  try {
-    const userId = req.id;
-    const { jobId } = req.params;
-    if (!jobId) {
-      return res
-        .status(400)
-        .json({ message: "Job ID is required", success: false });
-    }
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    user.savedJobs = user.savedJobs.filter((id) => id.toString() !== jobId);
-    await user.save();
-    return res
-      .status(200)
-      .json({ message: "Job removed from saved", success: true });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
-  }
-};
-
-export const getSavedJobs = async (req, res) => {
-  try {
-    const userId = req.id;
-    const user = await User.findById(userId).populate({
-      path: "savedJobs",
-      populate: { path: "company" },
-    });
-
-    console.log("userId:", userId);
-
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    // console.log(user.savedJobs);
-
-    return res
-      .status(200)
-      .json({ savedJobs: user.savedJobs, userId: user._id, success: true });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
   }
 };

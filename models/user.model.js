@@ -41,6 +41,10 @@ const userSchema = new mongoose.Schema(
     resetPasswordExpires: {
       type: Date,
     },
+    savedJobs: [{
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Job"
+    }],
   },
   {
     timestamps: true,

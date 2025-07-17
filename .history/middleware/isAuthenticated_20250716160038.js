@@ -8,7 +8,7 @@ const isAuthenticated = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    // console.log("Received token:", token);
+    console.log("Received token:", token);
 
     if (!token) {
       return res.status(401).json({

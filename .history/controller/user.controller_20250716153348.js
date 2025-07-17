@@ -98,8 +98,8 @@ export const login = async (req, res) => {
     const tokenData = {
       userId: user._id,
     };
-    const token = jwt.sign({ userId: user._id }, process.env.SECRET_KEY, {
-      expiresIn: "1h",
+    const token = await jwt.sign(tokenData, process.env.SECRET_KEY, {
+      expiresIn: "1d",
     });
 
     user = {
@@ -141,7 +141,7 @@ export const logout = async (req, res) => {
 };
 export const updateProfile = async (req, res) => {
   try {
-    console.log("Update profile called");
+    alert
     const { fullName, email, phoneNumber, bio, skills } = req.body;
 
     const file = req.file;
@@ -152,7 +152,9 @@ export const updateProfile = async (req, res) => {
       cloudResponse = await cloudinary.uploader.upload(fileUri.content);
     }
 
-    let skillsArray = Array.isArray(skills) ? skills : skills?.split(",");
+    let skillsArray = Array.isArray(skills)
+      ? skills
+      : skills?.split(",");
 
     const userId = req.id;
 
@@ -282,93 +284,5 @@ export const resetPassword = async (req, res) => {
   } catch (error) {
     console.error(error);
     res.status(500).json({ success: false, message: "Server error" });
-  }
-};
-
-// Save a job for later
-export const saveJobForLater = async (req, res) => {
-  try {
-    const userId = req.id;
-    const { jobId } = req.params;
-    if (!jobId) {
-      return res
-        .status(400)
-        .json({ message: "Job ID is required", success: false });
-    }
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    if (user.savedJobs.includes(jobId)) {
-      return res
-        .status(400)
-        .json({ message: "Job already saved", success: false });
-    }
-    user.savedJobs.push(jobId);
-    await user.save();
-    return res
-      .status(200)
-      .json({
-        message: "Job saved for later",
-        success: true,
-        userId: user._id,
-      });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
-  }
-};
-
-export const removeSavedJob = async (req, res) => {
-  try {
-    const userId = req.id;
-    const { jobId } = req.params;
-    if (!jobId) {
-      return res
-        .status(400)
-        .json({ message: "Job ID is required", success: false });
-    }
-    const user = await User.findById(userId);
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    user.savedJobs = user.savedJobs.filter((id) => id.toString() !== jobId);
-    await user.save();
-    return res
-      .status(200)
-      .json({ message: "Job removed from saved", success: true });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
-  }
-};
-
-export const getSavedJobs = async (req, res) => {
-  try {
-    const userId = req.id;
-    const user = await User.findById(userId).populate({
-      path: "savedJobs",
-      populate: { path: "company" },
-    });
-
-    console.log("userId:", userId);
-
-    if (!user) {
-      return res
-        .status(404)
-        .json({ message: "User not found", success: false });
-    }
-    // console.log(user.savedJobs);
-
-    return res
-      .status(200)
-      .json({ savedJobs: user.savedJobs, userId: user._id, success: true });
-  } catch (error) {
-    console.log(error);
-    return res.status(500).json({ message: "Server error", success: false });
   }
 };
