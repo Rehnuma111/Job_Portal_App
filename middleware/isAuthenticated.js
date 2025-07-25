@@ -8,8 +8,6 @@ const isAuthenticated = async (req, res, next) => {
       token = req.headers.authorization.split(" ")[1];
     }
 
-    // console.log("Received token:", token);
-
     if (!token) {
       return res.status(401).json({
         message: "User not authenticated",
@@ -19,7 +17,6 @@ const isAuthenticated = async (req, res, next) => {
 
     const decode = jwt.verify(token, process.env.SECRET_KEY);
 
-    // Fix: access correct property
     req.id = decode.userId;
 
     next();

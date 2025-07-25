@@ -63,6 +63,7 @@ export const register = async (req, res) => {
     });
   }
 };
+
 export const login = async (req, res) => {
   try {
     const { email, password, role } = req.body;
@@ -139,6 +140,7 @@ export const logout = async (req, res) => {
     console.log(error);
   }
 };
+
 export const updateProfile = async (req, res) => {
   try {
     console.log("Update profile called");
@@ -285,7 +287,6 @@ export const resetPassword = async (req, res) => {
   }
 };
 
-// Save a job for later
 export const saveJobForLater = async (req, res) => {
   try {
     const userId = req.id;

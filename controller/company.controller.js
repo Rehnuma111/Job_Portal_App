@@ -81,8 +81,6 @@ export const getCompanyById = async (req, res) => {
   }
 };
 
-//Update Company
-
 export const UpdateCompany = async (req, res) => {
   try {
     const { name, description, website, location } = req.body;
