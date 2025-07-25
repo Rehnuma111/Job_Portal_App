@@ -1,4 +1,6 @@
 import { Company } from "../models/company.model.js";
+import cloudinary from "../utils/cloudniary.js";
+import getDataUri from "../utils/getDataUri.js";
 
 export const registerCompany = async (req, res) => {
   try {
@@ -85,9 +87,20 @@ export const UpdateCompany = async (req, res) => {
   try {
     const { name, description, website, location } = req.body;
     const file = req.file;
-    // Idhar cloudiobary ayega
+    let logoUrl;
 
+    // Handle file upload to Cloudinary if file is present
+    if (file) {
+      const fileUri = getDataUri(file);
+      const cloudResponse = await cloudinary.uploader.upload(fileUri.content);
+      logoUrl = cloudResponse.secure_url;
+    }
+
+    // Prepare update object
     const updateOne = { name, description, website, location };
+    if (logoUrl) {
+      updateOne.logo = logoUrl;
+    }
 
     const company = await Company.findByIdAndUpdate(req.params.id, updateOne, {
       new: true,
@@ -102,8 +115,14 @@ export const UpdateCompany = async (req, res) => {
     return res.status(200).json({
       message: "Company information Updated",
       success: true,
+      company,
     });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({
+      message: "Something went wrong while updating company.",
+      success: false,
+      error: error.message,
+    });
   }
 };

@@ -309,13 +309,11 @@ export const saveJobForLater = async (req, res) => {
     }
     user.savedJobs.push(jobId);
     await user.save();
-    return res
-      .status(200)
-      .json({
-        message: "Job saved for later",
-        success: true,
-        userId: user._id,
-      });
+    return res.status(200).json({
+      message: "Job saved for later",
+      success: true,
+      userId: user._id,
+    });
   } catch (error) {
     console.log(error);
     return res.status(500).json({ message: "Server error", success: false });
@@ -370,6 +368,15 @@ export const getSavedJobs = async (req, res) => {
       .json({ savedJobs: user.savedJobs, userId: user._id, success: true });
   } catch (error) {
     console.log(error);
+    return res.status(500).json({ message: "Server error", success: false });
+  }
+};
+export const getAllUsers = async (req, res) => {
+  try {
+    const users = await User.find();
+    return res.status(200).json({ users, success: true });
+  } catch (error) {
+    console.error(error);
     return res.status(500).json({ message: "Server error", success: false });
   }
 };
