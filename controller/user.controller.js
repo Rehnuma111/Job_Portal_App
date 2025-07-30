@@ -169,7 +169,16 @@ export const updateProfile = async (req, res) => {
     if (!user.profile) user.profile = {};
 
     if (fullName) user.fullName = fullName;
-    if (email) user.email = email;
+    if (email && email !== user.email) {
+      const existingUser = await User.findOne({ email });
+      if (existingUser && existingUser._id.toString() !== userId) {
+        return res.status(400).json({
+          message: "Email is already in use by another account.",
+          success: false,
+        });
+      }
+      user.email = email;
+    }
     if (phoneNumber) user.phoneNumber = phoneNumber;
     if (bio) user.profile.bio = bio;
     if (skillsArray) user.profile.skills = skillsArray;
