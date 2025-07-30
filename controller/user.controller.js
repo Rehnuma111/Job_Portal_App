@@ -200,6 +200,7 @@ export const updateProfile = async (req, res) => {
     console.error("Update profile error:", error);
     return res.status(500).json({
       message: "Something went wrong while updating profile.",
+      error: error.message,
       success: false,
     });
   }
